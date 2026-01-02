@@ -58,9 +58,9 @@ class CertClientConfig:
 
 @dataclass(frozen=True)
 class CertificatesConfig:
-    subject: CertSubjectConfig = CertSubjectConfig()
-    server: CertServerConfig = CertServerConfig()
-    client: CertClientConfig = CertClientConfig()
+    subject: CertSubjectConfig | None = None
+    server: CertServerConfig | None = None
+    client: CertClientConfig | None = None
 
 
 @dataclass(frozen=True)
@@ -69,7 +69,7 @@ class Settings:
     validity: ValidityConfig = ValidityConfig()
     keys: KeysConfig = KeysConfig()
     expiry: ExpiryConfig = ExpiryConfig()
-    certificates: CertificatesConfig = CertificatesConfig()
+    certificates: CertificatesConfig | None = None  # CertificatesConfig()
 
 
 class SettingsKwargs(TypedDict, total=False):

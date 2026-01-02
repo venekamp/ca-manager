@@ -37,3 +37,9 @@ def show_config() -> None:
 
     typer.echo(message="Expiry warnings:")
     typer.echo(message=f"  Warn if expiring within {settings.expiry.warning_days} days")
+
+    if settings.certificates is None:
+        typer.echo(message="No certificates details found.")
+
+    if settings.certificates is not None and settings.certificates.client is not None:
+        typer.echo(message=f"{settings.certificates.client.subject.organizational_unit!r}")

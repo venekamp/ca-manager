@@ -95,7 +95,7 @@ CERT_CLIENT_SPEC: SectionSpec[CertClientConfig] = SectionSpec(
     },
     default_factory=CertClientConfig,
 )
-CERTIFICATES_SPEC: SectionSpec[CertificatesConfig] = SectionSpec(
+CERTIFICATES_SPEC: SectionSpec[CertificatesConfig | None] = SectionSpec(
     name="certificates",
     target=CertificatesConfig,
     field_parsers={
@@ -103,7 +103,7 @@ CERTIFICATES_SPEC: SectionSpec[CertificatesConfig] = SectionSpec(
         "server": section_parser(spec=CERT_SERVER_SPEC),
         "client": section_parser(spec=CERT_CLIENT_SPEC),
     },
-    default_factory=CertificatesConfig,
+    default_factory=lambda: None,
 )
 
 
