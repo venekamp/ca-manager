@@ -17,3 +17,9 @@ def parse_path(raw: object, name: str) -> Path:
     if not isinstance(raw, str):
         raise ValueError(f"{name} must be a string path")
     return Path(raw)
+
+
+def parse_string(raw: object, name: str) -> str:
+    if not isinstance(raw, str):
+        raise ValueError(f"{name} must be a string")
+    return raw

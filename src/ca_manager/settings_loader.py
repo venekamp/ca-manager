@@ -6,6 +6,7 @@ import typer
 
 from ca_manager.config.root_parser import parse_settings_root
 from ca_manager.config.yaml_loader import load_yaml_root
+
 from .settings import Settings
 
 # Use your existing CONFIG_PATH constant.

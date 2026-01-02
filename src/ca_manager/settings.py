@@ -36,11 +36,40 @@ class ExpiryConfig:
 
 
 @dataclass(frozen=True)
+class CertSubjectConfig:
+    country: str = ""
+    organizational_unit: str = ""
+
+
+@dataclass(frozen=True)
+class ProfileConfig:
+    organizational_unit: str = ""
+
+
+@dataclass(frozen=True)
+class CertServerConfig:
+    subject: ProfileConfig = ProfileConfig()
+
+
+@dataclass(frozen=True)
+class CertClientConfig:
+    subject: ProfileConfig = ProfileConfig()
+
+
+@dataclass(frozen=True)
+class CertificatesConfig:
+    subject: CertSubjectConfig = CertSubjectConfig()
+    server: CertServerConfig = CertServerConfig()
+    client: CertClientConfig = CertClientConfig()
+
+
+@dataclass(frozen=True)
 class Settings:
     base_path: Path = DEFAULT_BASE_PATH
     validity: ValidityConfig = ValidityConfig()
     keys: KeysConfig = KeysConfig()
     expiry: ExpiryConfig = ExpiryConfig()
+    certificates: CertificatesConfig = CertificatesConfig()
 
 
 class SettingsKwargs(TypedDict, total=False):
@@ -48,3 +77,4 @@ class SettingsKwargs(TypedDict, total=False):
     validity: ValidityConfig
     keys: KeysConfig
     expiry: ExpiryConfig
+    Certificates: CertificatesConfig

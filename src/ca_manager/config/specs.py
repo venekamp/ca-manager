@@ -2,12 +2,31 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 
-from ca_manager.config.parsers import parse_path, parse_positive_int
-from ca_manager.settings import ExpiryConfig, KeysConfig, Settings, ValidityConfig
+from ca_manager.config.parsers import parse_path, parse_positive_int, parse_string
 from ca_manager.config.section_spec import RootSectionSpec, SectionSpec
+from ca_manager.settings import (
+    CertClientConfig,
+    CertificatesConfig,
+    CertServerConfig,
+    CertSubjectConfig,
+    ExpiryConfig,
+    KeysConfig,
+    ProfileConfig,
+    Settings,
+    ValidityConfig,
+)
+
+type ValueParser = Callable[[object, str], object]
+
+
+def section_parser[T](spec: SectionSpec[T]) -> ValueParser:
+    def parse(raw: object, _: str) -> T:
+        return spec.parse(raw)
+
+    return parse
+
 
 # Section specs (section name + dataclass + per-field parsers + defaults)
-
 VALIDITY_SPEC: SectionSpec[ValidityConfig] = SectionSpec(
     name="validity",
     target=ValidityConfig,
@@ -39,6 +58,54 @@ EXPIRY_SPEC: SectionSpec[ExpiryConfig] = SectionSpec(
     default_factory=ExpiryConfig,
 )
 
+CERT_SUBJECT_SPEC: SectionSpec[CertSubjectConfig] = SectionSpec(
+    name="subject",
+    target=CertSubjectConfig,
+    field_parsers={
+        "country": parse_string,
+        "organizational_unit": parse_string,
+    },
+    default_factory=CertSubjectConfig,
+)
+
+PROFILE_SPEC: SectionSpec[ProfileConfig] = SectionSpec(
+    name="subject",
+    target=ProfileConfig,
+    field_parsers={
+        "organizational_unit": parse_string,
+    },
+    default_factory=ProfileConfig,
+)
+
+CERT_SERVER_SPEC: SectionSpec[CertServerConfig] = SectionSpec(
+    name="server",
+    target=CertServerConfig,
+    field_parsers={
+        "subject": section_parser(spec=PROFILE_SPEC),
+    },
+    default_factory=CertServerConfig,
+)
+
+
+CERT_CLIENT_SPEC: SectionSpec[CertClientConfig] = SectionSpec(
+    name="server",
+    target=CertClientConfig,
+    field_parsers={
+        "subject": section_parser(spec=PROFILE_SPEC),
+    },
+    default_factory=CertClientConfig,
+)
+CERTIFICATES_SPEC: SectionSpec[CertificatesConfig] = SectionSpec(
+    name="certificates",
+    target=CertificatesConfig,
+    field_parsers={
+        "subject": section_parser(spec=CERT_SUBJECT_SPEC),
+        "server": section_parser(spec=CERT_SERVER_SPEC),
+        "client": section_parser(spec=CERT_CLIENT_SPEC),
+    },
+    default_factory=CertificatesConfig,
+)
+
 
 # Leaf fields at the root can be expressed as a "fake section" spec too,
 # but we keep them separate for clarity. Here we parse base_path as a leaf.
@@ -58,7 +125,8 @@ ROOT_LEAF_PARSERS: Mapping[
 
 # Root sections: key -> SectionSpec
 ROOT_SECTION_SPECS: Mapping[str, RootSectionSpec] = {
-    "validity": VALIDITY_SPEC,  # type: ignore[assignment]
-    "keys": KEYS_SPEC,  # type: ignore[assignment]
-    "expiry": EXPIRY_SPEC,  # type: ignore[assignment]
+    "validity": VALIDITY_SPEC,
+    "keys": KEYS_SPEC,
+    "expiry": EXPIRY_SPEC,
+    "certificates": CERTIFICATES_SPEC,
 }
