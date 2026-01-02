@@ -77,4 +77,4 @@ class SettingsKwargs(TypedDict, total=False):
     validity: ValidityConfig
     keys: KeysConfig
     expiry: ExpiryConfig
-    Certificates: CertificatesConfig
+    certificates: CertificatesConfig | None
