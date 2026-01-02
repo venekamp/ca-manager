@@ -38,22 +38,22 @@ class ExpiryConfig:
 @dataclass(frozen=True)
 class CertSubjectConfig:
     country: str = ""
-    organizational_unit: str = ""
+    organizational_unit: str | None = None
 
 
 @dataclass(frozen=True)
 class ProfileConfig:
-    organizational_unit: str = ""
+    organizational_unit: str | None = None
 
 
 @dataclass(frozen=True)
 class CertServerConfig:
-    subject: ProfileConfig = ProfileConfig()
+    subject: ProfileConfig | None = None
 
 
 @dataclass(frozen=True)
 class CertClientConfig:
-    subject: ProfileConfig = ProfileConfig()
+    subject: ProfileConfig | None = None
 
 
 @dataclass(frozen=True)
