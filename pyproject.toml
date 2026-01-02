@@ -4,11 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = [
-    "cryptography>=46.0.3",
-    "pyyaml>=6.0.3",
-    "typer>=0.21.0",
-]
+dependencies = ["cryptography>=46.0.3", "pyyaml>=6.0.3", "typer>=0.21.0"]
 
 [project.scripts]
 ca-manager = "ca_manager.main:app"
@@ -25,7 +21,7 @@ venvPath = "."
 venv = ".venv"
 include = ["src"]
 exclude = []
-extraPaths = []
+extraPaths = ["src"]
 pythonPlatform = "Linux"
 pythonVersion = "3.14"
 #typeCheckingMode = "recommended"
@@ -97,8 +93,4 @@ line-ending = "lf"
 skip-magic-trailing-comma = false
 
 [dependency-groups]
-dev = [
-    "basedpyright>=1.36.2",
-    "pytest>=9.0.2",
-    "ruff>=0.14.10",
-]
+dev = ["basedpyright>=1.36.2", "pytest>=9.0.2", "ruff>=0.14.10"]
