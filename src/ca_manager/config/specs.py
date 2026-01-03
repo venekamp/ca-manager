@@ -88,7 +88,7 @@ CERT_SERVER_SPEC: SectionSpec[CertServerConfig] = SectionSpec(
 
 
 CERT_CLIENT_SPEC: SectionSpec[CertClientConfig] = SectionSpec(
-    name="server",
+    name="client",
     target=CertClientConfig,
     field_parsers={
         "subject": section_parser(spec=PROFILE_SPEC),
