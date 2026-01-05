@@ -201,7 +201,4 @@ def is_issuerecord(value: object) -> TypeGuard[IssueRecord]:
     if value["type"] not in ("client", "server"):
         return False
 
-    if not all(isinstance(x, str) for x in value["san"]):  # pyright: ignore[reportUnknownVariableType]
-        return False
-
     return True

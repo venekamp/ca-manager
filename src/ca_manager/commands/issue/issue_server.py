@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from ipaddress import ip_address
 from pathlib import Path
@@ -13,14 +14,22 @@ from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
 from cryptography.x509.extensions import SubjectAlternativeName
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
-from ...config.defaults import DEFAULT_BASE_PATH, DEFAULT_SERVER_CERT_VALIDITY_DAYS, DEFAULT_SERVER_KEY_SIZE
-from ...metadata.model import IssuedCertificate
-from ...metadata.store import append_record
+from ca_manager.config.defaults import (
+    DEFAULT_BASE_PATH,
+    DEFAULT_SERVER_CERT_VALIDITY_DAYS,
+    DEFAULT_SERVER_KEY_SIZE,
+)
+from ca_manager.metadata.model import IssuedCertificate
+from ca_manager.metadata.store import append_record
+from ca_manager.runtime import get_settings
+from ca_manager.settings import Settings
+from ca_manager.workspace import Workspace
 
 app: typer.Typer = typer.Typer(help="Issue server certificates")
 
 
 def validate_server_request(
+    *,
     dns: list[str],
     ip: list[str],
     ca_key_path: Path,
@@ -89,8 +98,13 @@ def build_server_certificate(
     ca_cert: x509.Certificate,
     san_extension: SubjectAlternativeName,
     days: int,
+    country: str | None = None,
 ) -> x509.Certificate:
-    subject: x509.Name = x509.Name([x509.NameAttribute(oid=NameOID.COMMON_NAME, value=name)])
+    subject_attrs: list[x509.NameAttribute[str]] = []
+    if country:
+        subject_attrs.append(x509.NameAttribute(oid=NameOID.COUNTRY_NAME, value=country))
+    subject_attrs.append(x509.NameAttribute(oid=NameOID.COMMON_NAME, value=name))
+    subject: x509.Name = x509.Name(subject_attrs)
 
     now: datetime = datetime.now(tz=UTC)
 
@@ -133,18 +147,23 @@ def build_server_certificate(
 
 
 def write_private_key(path: Path, key: rsa.RSAPrivateKey) -> None:
-    with path.open("wb") as f:
-        _ = f.write(
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    try:
+        _ = os.write(
+            fd,
             key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.TraditionalOpenSSL,
                 encryption_algorithm=serialization.NoEncryption(),
-            )
+            ),
         )
-    path.chmod(mode=0o600)
+    finally:
+        os.close(fd)
 
 
 def write_certificate(path: Path, cert: x509.Certificate) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("wb") as f:
         _ = f.write(cert.public_bytes(encoding=serialization.Encoding.PEM))
 
@@ -171,10 +190,11 @@ def issue_server(
             default_factory=list,
         ),
     ],
-    path: Annotated[
+    _path: Annotated[
         Path,
         typer.Option(
-            help="Base directory of the Certificate Authority",
+            "--path",
+            help="Base directory of the Certificate Authority (deprecated, use config file)",
             exists=True,
             file_okay=False,
             dir_okay=True,
@@ -191,13 +211,24 @@ def issue_server(
         typer.Option(help="Validity of the server certificate in days"),
     ] = DEFAULT_SERVER_CERT_VALIDITY_DAYS,
 ) -> None:
-    ca_key_path: Path = path / "ca" / "ca.key"
-    ca_cert_path: Path = path / "ca" / "ca.crt"
+    settings: Settings = get_settings()
+    ws: Workspace = Workspace(base_path=settings.base_path)
 
-    key_out: Path = path / "private" / "server" / f"{name}.key"
-    cert_out: Path = path / "issued" / "server" / f"{name}.crt"
+    ca_key_path: Path = ws.ca_key
+    ca_cert_path: Path = ws.ca_cert
 
-    validate_server_request(dns, ip, ca_key_path, ca_cert_path, key_out, cert_out, name)
+    key_out: Path = ws.private_server_key(name=name)
+    cert_out: Path = ws.issued_server_cert(name=name)
+
+    validate_server_request(
+        dns=dns,
+        ip=ip,
+        ca_key_path=ca_key_path,
+        ca_cert_path=ca_cert_path,
+        key_out=key_out,
+        cert_out=cert_out,
+        name=name,
+    )
     ca_key, ca_cert = load_ca(ca_key_path, ca_cert_path)
     server_key: rsa.RSAPrivateKey = rsa.generate_private_key(
         public_exponent=65537,
@@ -206,6 +237,10 @@ def issue_server(
 
     san_extension, san_entries = build_san_extension(dns, ip)
 
+    country: str | None = None
+    if settings.certificates and settings.certificates.subject and settings.certificates.subject.country:
+        country = settings.certificates.subject.country
+
     certificate: x509.Certificate = build_server_certificate(
         name=name,
         server_key=server_key,
@@ -213,6 +248,7 @@ def issue_server(
         ca_cert=ca_cert,
         san_extension=san_extension,
         days=days,
+        country=country,
     )
     write_private_key(path=key_out, key=server_key)
     write_certificate(path=cert_out, cert=certificate)
@@ -225,10 +261,10 @@ def issue_server(
         san=[str(x) for x in san_entries],
         not_before=certificate.not_valid_before_utc,
         not_after=certificate.not_valid_after_utc,
-        key_path=str(key_out.relative_to(other=path)),
-        cert_path=str(cert_out.relative_to(other=path)),
+        key_path=str(key_out.relative_to(other=settings.base_path)),
+        cert_path=str(cert_out.relative_to(other=settings.base_path)),
     )
 
-    append_record(base_path=path, record=record)
+    append_record(base_path=settings.base_path, record=record)
 
     typer.echo(message=f"Issued server certificate '{name}'")

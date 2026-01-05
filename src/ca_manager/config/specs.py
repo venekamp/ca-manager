@@ -16,10 +16,8 @@ from ca_manager.settings import (
     ValidityConfig,
 )
 
-type ValueParser = Callable[[object, str], object]
 
-
-def section_parser[T](spec: SectionSpec[T]) -> ValueParser:
+def section_parser[T](spec: SectionSpec[T]) -> Callable[[object, str], object]:
     def parse(raw: object, _: str) -> T:
         return spec.parse(raw)
 

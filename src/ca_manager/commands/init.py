@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
@@ -113,16 +114,19 @@ def init(
         .sign(private_key, algorithm=hashes.SHA256())
     )
 
-    # 4. Write key (600)
-    with key_path.open("wb") as f:
-        _ = f.write(
+    # 4. Write key with secure permissions (0o600 set atomically)
+    fd: int = os.open(path=key_path, flags=os.O_CREAT | os.O_WRONLY | os.O_TRUNC, mode=0o600)
+    try:
+        _ = os.write(
+            fd,
             private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.TraditionalOpenSSL,
                 encryption_algorithm=serialization.NoEncryption(),
-            )
+            ),
         )
-    key_path.chmod(mode=0o600)
+    finally:
+        os.close(fd)
 
     # 5. Write certificate
     with cert_path.open("wb") as f:

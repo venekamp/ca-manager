@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
@@ -18,6 +19,9 @@ from ca_manager.config.defaults import (
 )
 from ca_manager.metadata.model import IssuedCertificate
 from ca_manager.metadata.store import append_record
+from ca_manager.runtime import get_settings
+from ca_manager.settings import Settings
+from ca_manager.workspace import Workspace
 
 app: typer.Typer = typer.Typer(help="Issue client certificates")
 
@@ -28,10 +32,11 @@ def issue_client(
         str,
         typer.Argument(help="Client identity (Common Name)"),
     ],
-    path: Annotated[
+    _path: Annotated[
         Path,
         typer.Option(
-            help="Base directory of the Certificate Authority",
+            "--path",
+            help="Base directory of the Certificate Authority (deprecated, use config file)",
             exists=True,
             file_okay=False,
             dir_okay=True,
@@ -54,19 +59,21 @@ def issue_client(
     The Common Name (CN) becomes the client identity
     used by services such as Mosquitto.
     """
+    settings: Settings = get_settings()
+    ws: Workspace = Workspace(base_path=settings.base_path)
 
-    ca_key_path: Path = path / "ca" / "ca.key"
-    ca_cert_path: Path = path / "ca" / "ca.crt"
+    ca_key_path: Path = ws.ca_key
+    ca_cert_path: Path = ws.ca_cert
 
     if not ca_key_path.exists() or not ca_cert_path.exists():
-        typer.echo(message="CA not initialised at this location")
+        typer.echo(message="CA not initialised at this location", err=True)
         raise typer.Exit(code=1)
 
-    key_out: Path = path / "private" / "client" / f"{name}.key"
-    cert_out: Path = path / "issued" / "client" / f"{name}.crt"
+    key_out: Path = ws.private_client_key(name=name)
+    cert_out: Path = ws.issued_client_cert(name=name)
 
     if key_out.exists() or cert_out.exists():
-        typer.echo(message=f"Client certificate '{name}' already exists")
+        typer.echo(message=f"Client certificate '{name}' already exists", err=True)
         raise typer.Exit(code=1)
 
     # Load CA materials
@@ -89,12 +96,13 @@ def issue_client(
         key_size=key_size,
     )
 
-    subject: x509.Name = x509.Name(
-        [
-            x509.NameAttribute(oid=NameOID.COUNTRY_NAME, value="NL"),
-            x509.NameAttribute(oid=NameOID.COMMON_NAME, value=name),
-        ]
-    )
+    subject_attrs: list[x509.NameAttribute[str]] = []
+    if settings.certificates and settings.certificates.subject and settings.certificates.subject.country:
+        subject_attrs.append(
+            x509.NameAttribute(oid=NameOID.COUNTRY_NAME, value=settings.certificates.subject.country)
+        )
+    subject_attrs.append(x509.NameAttribute(oid=NameOID.COMMON_NAME, value=name))
+    subject: x509.Name = x509.Name(subject_attrs)
 
     now: datetime = datetime.now(tz=UTC)
 
@@ -131,18 +139,23 @@ def issue_client(
         .sign(private_key=ca_key, algorithm=hashes.SHA256())
     )
 
-    # Write client key (600)
-    with key_out.open("wb") as f:
-        _ = f.write(
+    # Write client key with secure permissions (0o600 set atomically)
+    key_out.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(key_out, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+    try:
+        _ = os.write(
+            fd,
             client_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.TraditionalOpenSSL,
                 encryption_algorithm=serialization.NoEncryption(),
-            )
+            ),
         )
-    key_out.chmod(mode=0o600)
+    finally:
+        os.close(fd)
 
     # Write certificate
+    cert_out.parent.mkdir(parents=True, exist_ok=True)
     with cert_out.open("wb") as f:
         _ = f.write(certificate.public_bytes(encoding=serialization.Encoding.PEM))
 
@@ -154,10 +167,10 @@ def issue_client(
         san=[],
         not_before=certificate.not_valid_before_utc,
         not_after=certificate.not_valid_after_utc,
-        key_path=str(key_out.relative_to(other=path)),
-        cert_path=str(cert_out.relative_to(other=path)),
+        key_path=str(key_out.relative_to(other=settings.base_path)),
+        cert_path=str(cert_out.relative_to(other=settings.base_path)),
     )
 
-    append_record(base_path=path, record=record)
+    append_record(base_path=settings.base_path, record=record)
 
     typer.echo(message=f"Issued client certificate '{name}'")
