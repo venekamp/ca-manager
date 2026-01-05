@@ -37,7 +37,7 @@ class ExpiryConfig:
 
 @dataclass(frozen=True)
 class CertSubjectConfig:
-    country: str = ""
+    country: str | None = None
     organizational_unit: str | None = None
 
 
@@ -69,7 +69,7 @@ class Settings:
     validity: ValidityConfig = ValidityConfig()
     keys: KeysConfig = KeysConfig()
     expiry: ExpiryConfig = ExpiryConfig()
-    certificates: CertificatesConfig | None = None  # CertificatesConfig()
+    certificates: CertificatesConfig | None = None
 
 
 class SettingsKwargs(TypedDict, total=False):
