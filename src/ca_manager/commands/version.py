@@ -1,8 +1,8 @@
+from importlib.metadata import version
+
 import typer
 
-app = typer.Typer(help="Show version.")
 
-
-@app.command()
-def version() -> None:
-    typer.echo("Version: xxx")
+def version_cmd() -> None:
+    """Show version."""
+    typer.echo(message=f"ca-manager {version(distribution_name='ca-manager')}")

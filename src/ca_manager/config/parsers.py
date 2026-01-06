@@ -3,12 +3,12 @@ from pathlib import Path
 
 def parse_positive_int(raw_data: object, name: str) -> int:
     if not isinstance(raw_data, int):
-        raise ValueError(f"{name} needs to be a positive interger.")
+        raise ValueError(f"{name} needs to be a positive integer.")
 
     data: int = raw_data
 
     if data < 0:
-        raise ValueError(f"{name} need to be positive.")
+        raise ValueError(f"{name} needs to be positive.")
 
     return data
 

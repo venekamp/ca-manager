@@ -27,19 +27,21 @@ import typer
 
 from ca_manager.commands.config import app as config_cmd
 from ca_manager.commands.init import app as init_cmd
+from ca_manager.commands.inspect import inspect_cert
 from ca_manager.commands.issue import app as issue_client_cmd
 from ca_manager.commands.list import app as list_cmd
-from ca_manager.commands.version import app as version_cmd
+from ca_manager.commands.version import version_cmd
 
 app: typer.Typer = typer.Typer(
     help="Private Certificate Authority management tool",
     no_args_is_help=True,
 )
 
-app.add_typer(typer_instance=version_cmd)
-app.add_typer(typer_instance=init_cmd)
+_ = app.command(name="version", options_metavar="--help")(version_cmd)
+app.add_typer(typer_instance=init_cmd, name="init")
 app.add_typer(typer_instance=issue_client_cmd, name="issue")
 app.add_typer(typer_instance=list_cmd, name="list")
+_ = app.command(name="inspect")(inspect_cert)
 app.add_typer(typer_instance=config_cmd, name="config")
 
 

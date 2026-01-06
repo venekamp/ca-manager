@@ -7,52 +7,33 @@ from typing import Annotated, Any, Literal, TypeGuard
 
 import typer
 
-from ca_manager.config.defaults import DEFAULT_BASE_PATH
 from ca_manager.metadata.types import IssueRecord
+from ca_manager.runtime import get_settings
+from ca_manager.workspace import Workspace
 
 app: typer.Typer = typer.Typer(help="List issued certificates")
 
 
 @app.command(name="issued")
 def list_issued(
-    path: Annotated[
-        Path,
-        typer.Option(
-            help="Base directory of the Certificate Authority",
-            exists=True,
-            file_okay=False,
-            dir_okay=True,
-            readable=True,
-        ),
-    ] = DEFAULT_BASE_PATH,
     cert_type: Annotated[
         Literal["client", "server"] | None,
-        typer.Option(
-            "--type",
-            help="Filter by certificate type",
-        ),
+        typer.Option("--type", help="Filter by certificate type"),
     ] = None,
     revoked_only: Annotated[
         bool,
-        typer.Option(
-            "--revoked",
-            help="Show only revoked certificates",
-        ),
+        typer.Option("--revoked", help="Show only revoked certificates"),
     ] = False,
     expiring: Annotated[
         int | None,
-        typer.Option(
-            "--expiring",
-            help="Show certificates expiring within N days",
-            min=1,
-        ),
+        typer.Option("--expiring", help="Show certificates expiring within N days", min=1),
     ] = None,
 ) -> None:
     """
     List issued certificates from metadata.
     """
-
-    index_file: Path = path / "metadata" / "issued.jsonl"
+    ws: Workspace = Workspace(base_path=get_settings().base_path)
+    index_file: Path = ws.issued_index
 
     if not index_file.exists():
         typer.echo(message="No issued certificates found")
