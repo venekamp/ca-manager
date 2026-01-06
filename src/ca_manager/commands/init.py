@@ -11,6 +11,9 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.x509.oid import NameOID
 
 from ca_manager.config.defaults import DEFAULT_BASE_PATH, DEFAULT_CA_KEY_SIZE, DEFAULT_CA_VALIDITY_DAYS
+from ca_manager.runtime import get_settings
+from ca_manager.settings import Settings
+from ca_manager.workspace import Workspace
 
 from .issue.common import generate_key, write_certificate, write_private_key
 
@@ -66,12 +69,12 @@ def build_ca_certificate(
             ),
             critical=True,
         )
-        .sign(key, algorithm=hashes.SHA256())
+        .sign(private_key=key, algorithm=hashes.SHA256())
     )
 
 
 @app.command()
-def init(
+def init_cmd(
     name: Annotated[str, typer.Argument(help="Common Name (CN) for the Certificate Authority")],
     path: Annotated[
         Path,
@@ -96,8 +99,11 @@ def init(
     - CA private key
     - Self-signed CA certificate
     """
-    key_path: Path = path / "ca" / "ca.key"
-    cert_path: Path = path / "ca" / "ca.crt"
+    settings: Settings = get_settings()
+    ws: Workspace = Workspace(base_path=settings.base_path)
+
+    key_path: Path = ws.ca_key
+    cert_path: Path = ws.ca_cert
 
     if key_path.exists() or cert_path.exists():
         typer.echo(message="CA already exists at this location", err=True)
