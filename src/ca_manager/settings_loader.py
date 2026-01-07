@@ -6,7 +6,7 @@ from pathlib import Path
 import typer
 
 from ca_manager.config.root_parser import parse_settings_root
-from ca_manager.config.yaml_loader import load_yaml_root
+from ca_manager.config.yaml_loader import load_yaml_config
 
 from .settings import Settings
 
@@ -28,7 +28,7 @@ def load_settings(path: Path | None = None) -> Settings:
         return Settings()
 
     try:
-        raw_yaml: dict[str, object] = load_yaml_root(path)
+        raw_yaml: dict[str, object] = load_yaml_config(path)
         return parse_settings_root(raw_yaml)
     except ValueError as e:
         typer.echo(message=str(e), err=True)

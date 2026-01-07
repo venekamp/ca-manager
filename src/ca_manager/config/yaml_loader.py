@@ -6,7 +6,7 @@ from typing import cast
 import yaml
 
 
-def load_yaml_root(path: Path) -> dict[str, object]:
+def load_yaml_config(path: Path) -> dict[str, object]:
     try:
         with path.open("r", encoding="utf-8") as f:
             raw: object = yaml.safe_load(stream=f)  # pyright: ignore[reportAny]
