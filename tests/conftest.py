@@ -18,7 +18,7 @@ def reset_settings() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def ca_workspace(tmp_path: Path) -> Generator[Path, None, None]:
+def ca_workspace(reset_settings: None, tmp_path: Path) -> Generator[Path, None, None]:
     """Provide a temporary workspace and configure settings to use it."""
     runtime._settings = Settings(base_path=tmp_path)
     yield tmp_path
