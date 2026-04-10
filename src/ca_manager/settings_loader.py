@@ -21,15 +21,18 @@ def get_config_path() -> Path:
     return DEFAULT_CONFIG_PATH
 
 
-def load_settings(config_path: Path | None = None) -> Settings:
+def load_settings(config_path: Path | None = None, base_path: Path | None = None) -> Settings:
     if config_path is None:
         config_path = get_config_path()
     if not config_path.exists():
+        if base_path is not None:
+            return Settings(base_path=base_path)
+
         return Settings()
 
     try:
         raw_yaml: dict[str, object] = load_yaml_config(path=config_path)
-        return parse_settings_root(raw_yaml)
+        return parse_settings_root(raw_yaml, base_path)
     except ValueError as e:
         typer.echo(message=str(e), err=True)
         raise typer.Exit(code=1)

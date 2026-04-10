@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.x509.oid import NameOID
 
-from ca_manager.config.defaults import DEFAULT_BASE_PATH, DEFAULT_CA_KEY_SIZE, DEFAULT_CA_VALIDITY_DAYS
+from ca_manager.config.defaults import DEFAULT_CA_KEY_SIZE, DEFAULT_CA_VALIDITY_DAYS
 from ca_manager.runtime import get_settings
 from ca_manager.settings import Settings
 from ca_manager.workspace import Workspace
@@ -77,7 +77,7 @@ def build_ca_certificate(
 def init_cmd(
     name: Annotated[str, typer.Argument(help="Common Name (CN) for the Certificate Authority")],
     path: Annotated[
-        Path,
+        Path | None,
         typer.Option(
             help="Base directory where CA data will be stored",
             exists=False,
@@ -85,7 +85,7 @@ def init_cmd(
             dir_okay=True,
             writable=True,
         ),
-    ] = DEFAULT_BASE_PATH,
+    ] = None,
     key_size: Annotated[int, typer.Option(help="RSA key size for the CA private key")] = DEFAULT_CA_KEY_SIZE,
     days: Annotated[
         int, typer.Option(help="Validity of the CA certificate in days")
@@ -99,7 +99,7 @@ def init_cmd(
     - CA private key
     - Self-signed CA certificate
     """
-    settings: Settings = get_settings()
+    settings: Settings = get_settings(base_path=path)
     ws: Workspace = Workspace(base_path=settings.base_path)
 
     key_path: Path = ws.ca_key
@@ -109,7 +109,7 @@ def init_cmd(
         typer.echo(message="CA already exists at this location", err=True)
         raise typer.Exit(code=1)
 
-    create_directory_structure(base_path=path)
+    create_directory_structure(base_path=settings.base_path)
 
     key: RSAPrivateKey = generate_key(key_size=key_size)
     cert: x509.Certificate = build_ca_certificate(name=name, key=key, days=days)

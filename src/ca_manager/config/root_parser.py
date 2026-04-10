@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import cast
 
 from ca_manager.settings import Settings, SettingsKwargs
@@ -14,7 +15,7 @@ type LeafValueParser = Callable[[object, str], object]
 type LeafSpec = tuple[LeafDefaultFactory, LeafValueParser]
 
 
-def parse_settings_root(raw_yaml: dict[str, object]) -> Settings:
+def parse_settings_root(raw_yaml: dict[str, object], base_path: Path | None = None) -> Settings:
     values: dict[str, object] = {}
 
     for key, raw_value in raw_yaml.items():
@@ -40,4 +41,6 @@ def parse_settings_root(raw_yaml: dict[str, object]) -> Settings:
 
     # Any missing keys will be filled by Settings defaults (frozen dataclass)
     kwargs: SettingsKwargs = cast(SettingsKwargs, cast(object, values))
+    if base_path is not None:
+        values["base_path"] = base_path
     return Settings(**kwargs)
